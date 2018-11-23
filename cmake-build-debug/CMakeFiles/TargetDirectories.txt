@@ -1,0 +1,5 @@
+D:/Users/Ju'/Google Drive/Works/iLight/cmake-build-debug/CMakeFiles/uno_CORE.dir
+D:/Users/Ju'/Google Drive/Works/iLight/cmake-build-debug/CMakeFiles/edit_cache.dir
+D:/Users/Ju'/Google Drive/Works/iLight/cmake-build-debug/CMakeFiles/iLight.dir
+D:/Users/Ju'/Google Drive/Works/iLight/cmake-build-debug/CMakeFiles/iLight-size.dir
+D:/Users/Ju'/Google Drive/Works/iLight/cmake-build-debug/CMakeFiles/rebuild_cache.dir
