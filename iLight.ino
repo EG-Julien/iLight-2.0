@@ -9,16 +9,12 @@ CmdParser cmdParser;
 
 #define DEBUG 0
 #define DATA 5
-#define LAMP A0
-#define LEDPOWER 10
-#define LED 4
-#define BUTTON_ONE 3
-#define BUTTON_TWO 2
+#define LAMP 9
 
 #define ERROR_SERIAL_PARSER -1
 
 #define NUM_LEDS    144
-#define BRIGHTNESS  128
+#define BRIGHTNESS  255
 #define LED_TYPE    WS2811
 #define COLOR_ORDER GRB
 
@@ -28,6 +24,7 @@ CRGB leds[NUM_LEDS];
 
 String IP = "0002";
 int STATE = 0;
+uint8_t brightness = 255;
 
 CRGBPalette16 currentPalette;
 TBlendType    currentBlending;
@@ -52,92 +49,31 @@ void setup() {
 
     Serial.println("Started");
 
-    pinMode(LED, OUTPUT);
-    pinMode(BUTTON_ONE, INPUT);
-    pinMode(BUTTON_TWO, INPUT);
     pinMode(LAMP, OUTPUT);
-    pinMode(LEDPOWER, OUTPUT);
 
-    digitalWrite(LED, HIGH);
     digitalWrite(LAMP, LOW);
-    digitalWrite(LEDPOWER, LOW);
 
-    /*FastLED.addLeds<LED_TYPE, DATA, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+    FastLED.addLeds<LED_TYPE, DATA, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalSMD5050 );
     FastLED.setBrightness(  BRIGHTNESS );
 
     currentPalette = RainbowColors_p;
-    currentBlending = LINEARBLEND;*/
+    currentBlending = LINEARBLEND;
 }
 
-unsigned long timer_one = 0, timer_two = 0;
+static uint8_t startIndex = 0;
 
 void loop() {
     checkCommand();
-/*
-    timer_two = millis();
-
-    if ((timer_two - timer_one) > 200) {
-        timer_one = millis();
-        if (digitalRead(BUTTON_ONE) == 0) {
-            if (STATE == 9) {
-                STATE = 0;
-            } else {
-                STATE++;
-            }
-        }
-
-        if (digitalRead(BUTTON_TWO) == 0)
-            STATE = 1;
-    }
-
-    switch (STATE) {
-        case 0:
-            ChangePalettePeriodically();
-            break;
-        case 1:
-            SetupBlackPalette();
-            break;
-        case 2:
-            currentPalette = RainbowColors_p;         currentBlending = LINEARBLEND;
-            break;
-        case 3:
-            currentPalette = RainbowStripeColors_p;   currentBlending = LINEARBLEND;
-            break;
-        case 4:
-            SetupPurpleAndGreenPalette();             currentBlending = LINEARBLEND;
-            break;
-        case 5:
-            SetupTotallyRandomPalette();              currentBlending = LINEARBLEND;
-            break;
-        case 6:
-            SetupBlackAndWhiteStripedPalette();       currentBlending = LINEARBLEND;
-            break;
-        case 7:
-            currentPalette = CloudColors_p;           currentBlending = LINEARBLEND;
-            break;
-        case 8:
-            currentPalette = PartyColors_p;           currentBlending = LINEARBLEND;
-            break;
-        case 9:
-            SetupWhitePalette();
-            break;
-    }
-
-
-
-    static uint8_t startIndex = 0;
     startIndex = startIndex + 1; /* motion speed */
-/*
-    FillLEDsFromPaletteColors( startIndex);
+
+    FillLEDsFromPaletteColors(startIndex);
 
     FastLED.show();
-    FastLED.delay(1000 / UPDATES_PER_SECOND);*/
+    //FastLED.delay(1);
 }
 
-void FillLEDsFromPaletteColors( uint8_t colorIndex)
+void FillLEDsFromPaletteColors(uint8_t colorIndex)
 {
-    uint8_t brightness = 255;
-
     for( int i = 0; i < NUM_LEDS; i++) {
         leds[i] = ColorFromPalette( currentPalette, colorIndex, brightness, currentBlending);
         colorIndex += 3;
@@ -186,15 +122,41 @@ void SetupBlackAndWhiteStripedPalette()
 
 }
 
+void fadeIn() {
+    FillLEDsFromPaletteColors(startIndex);
+    FastLED.show();
+    while (brightness != 255) {
+        brightness++;
+        FillLEDsFromPaletteColors(startIndex);
+        FastLED.show();
+        delay(10);
+    }
+}
+
+void fadeOut() {
+    while (brightness != 0) {
+        brightness--;
+        FillLEDsFromPaletteColors(startIndex);
+        FastLED.show();
+        delay(10);
+    }
+}
+
 void SetupBlackPalette() {
     fill_solid(currentPalette, 16, CRGB::Black);
 }
 
-void SetupWhitePalette() {
-    fill_solid(currentPalette, 16, CRGB::Black);
-    for (int i = 0; i < 16; i = i + 2) {
-        currentPalette[i] = CRGB::White;
+void SetupWarmWhitePalette() {
+
+    for (int i = 0; i < NUM_LEDS; i++) {
+        leds[i].red   = 255;
+        leds[i].green = 193;
+        leds[i].blue  = 7; // rgb(255, 193, 7)
     }
+}
+
+void SetupWhitePalette() {
+    fill_solid(currentPalette, 16, CRGB::White);
 }
 
 // This function sets up a palette of purple and green stripes.
@@ -249,10 +211,92 @@ void checkCommand(void) {
                 if (cmdParser.equalCommand_P(PSTR("IP_0002"))) {*/
                     if (cmdParser.equalCommand_P(PSTR("LAMP_ON"))) {
                         digitalWrite(LAMP, HIGH);
-                        Serial.println("ON");
                     } else if (cmdParser.equalCommand_P(PSTR("LAMP_OFF"))) {
                         digitalWrite(LAMP, LOW);
-                        Serial.println("OFF");
+                    } else if (cmdParser.equalCommand_P(PSTR("LED_ON"))) {
+                        fadeOut();
+                        currentPalette = RainbowColors_p;
+                        currentBlending = LINEARBLEND;
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("LED_OFF"))) {
+                        fadeOut();
+                        SetupBlackPalette();
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("LED_0"))) {
+                        fadeOut();
+                        ChangePalettePeriodically();
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("LED_1"))) {
+                        fadeOut();
+                        SetupBlackPalette();
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("LED_2"))) {
+                        fadeOut();
+                        currentPalette = RainbowColors_p;
+                        currentBlending = LINEARBLEND;
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("LED_3"))) {
+                        fadeOut();
+                        currentPalette = RainbowStripeColors_p;
+                        currentBlending = LINEARBLEND;
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("LED_4"))) {
+                        fadeOut();
+                        SetupPurpleAndGreenPalette();
+                        currentBlending = LINEARBLEND;
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("LED_5"))) {
+                        fadeOut();
+                        SetupTotallyRandomPalette();
+                        currentBlending = LINEARBLEND;
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("LED_6"))) {
+                        fadeOut();
+                        SetupBlackAndWhiteStripedPalette();
+                        currentBlending = LINEARBLEND;
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("LED_7"))) {
+                        fadeOut();
+                        currentPalette = CloudColors_p;
+                        currentBlending = LINEARBLEND;
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("LED_8"))) {
+                        fadeOut();
+                        currentPalette = PartyColors_p;
+                        currentBlending = LINEARBLEND;
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("LED_9"))) {
+                        fadeOut();
+                        SetupWhitePalette();
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("ALL_OFF"))) {
+                        fadeOut();
+                        digitalWrite(LAMP, LOW);
+                        SetupBlackPalette();
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("AMBIANT_LIGHTING"))) {
+                        fadeOut();
+                        currentPalette = RainbowColors_p;
+                        currentBlending = LINEARBLEND;
+                        digitalWrite(LAMP, LOW);
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("NORMAL_LIGHTING"))) {
+                        fadeOut();
+                        SetupWhitePalette();
+                        brightness = 255;
+                        fadeIn();
+                    } else if (cmdParser.equalCommand_P(PSTR("LOWER_LIGHT"))) {
+                        if (brightness - 15 > 0) {
+                            brightness -= 15;
+                        } else {
+                            brightness = 0;
+                        }
+                    } else if (cmdParser.equalCommand_P(PSTR("HIGHER_LIGHT"))) {
+                        if (brightness + 15 < 255) {
+                            brightness += 15;
+                        } else {
+                            brightness = 255;
+                        }
                     }
                 /*}
             }*/
